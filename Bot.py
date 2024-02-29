@@ -11,6 +11,7 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 #intents.voice_states = True  
 
 bot = commands.Bot(command_prefix = '!', intents = intents)
@@ -68,6 +69,18 @@ async def on_error(event, *args, **kwargs):
             f.write(f'Unhandled message: {args[0]}\n')
         else:
             raise
+
+
+@bot.event
+async def on_member_join(member):
+    print('member joined')
+    guild = member.guild
+    channel = guild.channels[0].channels[0]
+    content = f'Поприветствуй нового участника {member} на сервере и поцелуй его'
+    print(content)
+    response = Gpt.send_prompt(content)
+    await channel.send(response)
+    
 
 @bot.event
 async def on_voice_state_update(member, before, after):
