@@ -85,114 +85,33 @@ async def on_member_join(member):
 @bot.event
 async def on_voice_state_update(member, before, after):
     nick = member.display_name
-    current_ch = after.channel
-    last_ch = before.channel
     guild = member.guild
-    create_vc = get(guild.voice_channels, name = 'Создать')
+    VC_maker = get(guild.voice_channels, name = 'Создать')
     
-    #Check if we just connected to a channel
-    if current_ch != None:
-        if last_ch == None:
-#   if current_ch.category == create_vc.category:
-            if current_ch == create_vc:
-                new_channel = await voice_channel_create(current_ch, nick, member)
-                await member.move_to(new_channel)
-        else:
-            if last_ch != create_vc and last_ch.category == create_vc.category:
-                if len(last_ch.members) == 0:
-                    await last_ch.delete()
-            if current_ch == create_vc:
-                new_channel = await voice_channel_create(current_ch, nick, member)
-                await member.move_to(new_channel)     
-    #Check if we left our channel, delete channel if empty 
-    else:
-        if last_ch.category == create_vc.category:
-            if last_ch != create_vc and last_ch.category == create_vc.category:
-                if len(last_ch.members) == 0:
-                    await last_ch.delete()
-                    
-                  
+    if after.channel == VC_maker:
+        new_channel = await voice_channel_create(after.channel, nick, member)
+        await member.move_to(new_channel)
+        
+    if before.channel == None:
+        return    
+    
+    if before.channel.category == VC_maker.category and before.channel != VC_maker and len(before.channel.members) == 0:
+        await before.channel.delete()
+        
+  
 async def voice_channel_create(channel, ch_name, member):
     new_channel = await channel.guild.create_voice_channel(name = ch_name,
-                                                   category = channel.category,
-                                                   user_limit = 5)
+                                                           category = channel.category,
+                                                           user_limit = 5)
     await new_channel.set_permissions(member,
-                              manage_channels = True,
-                              mute_members = True,
-                              move_members = True,
-                              manage_permissions = True,
-                              create_instant_invite = True)
-    return(new_channel)
-
-bot.run(TOKEN)
-
-
-
-
-
-'''
-@bot.command(name = 'create_vc')
-async def create_channel(ctx, arg = None):
-    author = ctx.author
-    guild = ctx.guild
-    channel_name = ctx.author.display_name
-    existing_channel = discord.utils.get(guild.channels, id = author.id)
-    channel_category = discord.utils.get(guild.categories, name = 'Голосовые каналы')
-
-    if not existing_channel:
-        response = 'Создаю голосовой канал: ' + channel_name    
-
-        # Creating channel without limits by default
-        if arg is None:
-            await ctx.reply(response)
-            await guild.create_voice_channel(name = channel_name, category = channel_category)  
-        # Creating limited channel   
-        else:
-            try:
-                arg = int(arg)
-                if arg > 99: arg = 99
-                if arg < 0: arg = 0
-                await ctx.reply(response)
-                await guild.create_voice_channel(name = channel_name, category = channel_category, user_limit = int(arg))
-        # Parameter error        
-            except ValueError:
-                response = 'Параметр должен быть целым числом'
-                await ctx.reply(response)
-
-        channel = get(guild.voice_channels, name = channel_name)
-        await channel.set_permissions(author,
                                       manage_channels = True,
                                       mute_members = True,
                                       move_members = True,
-                                      manage_permissions = True)
-        channel.id = author.id 
+                                      manage_permissions = True,
+                                      create_instant_invite = True)
+    return(new_channel)
 
-        # Abort if channel already exists    
-    else:
-        channel = get(guild.voice_channels, id = author.id).name
-
-        response = 'У тебя уже есть канал: ' + channel
-        await ctx.reply(response)
-'''
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+bot.run(TOKEN)
 
 
 
