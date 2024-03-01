@@ -29,11 +29,11 @@ async def artihelp(ctx):
 
     await ctx.reply(response)
 
-Gpt = GPT()
+gpt = GPT()
 f = FileEdit()
 
 @bot.command(name = 'gpt')
-async def gpt(ctx, *, message: str):
+async def chat_gpt(ctx, *, message: str):
 
     channel_name = ctx.channel.name
     filename = channel_name + '.txt'
@@ -49,14 +49,13 @@ async def gpt(ctx, *, message: str):
     message = f.get_context(filename)
     print (message)
 
-    response = Gpt.send_prompt(message) 
+    response = gpt.send_prompt(message) 
     f.write_to_file(filename, 'assistant', response)
     print("assistant: " + response)
 
     await ctx.reply(response) 
 
-
-        
+ 
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.errors.CheckFailure):
@@ -73,12 +72,11 @@ async def on_error(event, *args, **kwargs):
 
 @bot.event
 async def on_member_join(member):
-    print('member joined')
     guild = member.guild
     channel = guild.channels[0].channels[0]
     content = f'Поприветствуй нового участника {member} на сервере и поцелуй его'
     print(content)
-    response = Gpt.send_prompt(content)
+    response = gpt.send_prompt(content)
     await channel.send(response)
     
 
