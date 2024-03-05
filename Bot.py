@@ -1,9 +1,9 @@
 import os
 import discord
+import MyOpenAiModule
 from discord.ext import commands
 from discord.utils import get
 from dotenv import load_dotenv
-from MyOpenAiModule import GPT
 from SaveLogs import FileEdit
 
 load_dotenv()
@@ -29,7 +29,7 @@ async def artihelp(ctx):
 
     await ctx.reply(response)
 
-gpt = GPT()
+gpt = MyOpenAiModule
 f = FileEdit()
 
 @bot.command(name = 'gpt')
@@ -49,7 +49,7 @@ async def chat_gpt(ctx, *, message: str):
     message = f.get_context(filename)
     print (message)
 
-    response = gpt.send_prompt(message) 
+    response = await gpt.send_prompt(message) 
     f.write_to_file(filename, 'assistant', response)
     print("assistant: " + response)
 
@@ -76,7 +76,7 @@ async def on_member_join(member):
     channel = guild.channels[0].channels[0]
     content = f'Поприветствуй нового участника {member} на сервере и поцелуй его'
     print(content)
-    response = gpt.send_prompt(content)
+    response = await gpt.send_prompt(content)
     await channel.send(response)
     
 
