@@ -1,5 +1,6 @@
 import os
 import discord
+import YandexTranslate
 import MyOpenAiModule
 from discord.ext import commands
 from discord.utils import get
@@ -12,7 +13,7 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
-#intents.voice_states = True  
+#intents.voice_states = True
 
 bot = commands.Bot(command_prefix = '!', intents = intents)
 
@@ -55,7 +56,13 @@ async def chat_gpt(ctx, *, message: str):
 
     await ctx.reply(response) 
 
- 
+
+@bot.command(name = 'tr')
+async def yandex_translate(ctx, *, message: str):
+    response, lang = await YandexTranslate.translate(message)   
+    await ctx.reply(f'*Автоопределение языка: {lang}* \n{response}')
+
+    
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.errors.CheckFailure):
@@ -75,7 +82,6 @@ async def on_member_join(member):
     guild = member.guild
     channel = guild.channels[0].channels[0]
     content = f'Поприветствуй нового участника {member} на сервере и поцелуй его'
-    print(content)
     response = await gpt.send_prompt(content)
     await channel.send(response)
     
