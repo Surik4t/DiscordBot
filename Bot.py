@@ -2,10 +2,11 @@ import os
 import discord
 import YandexTranslate
 import MyOpenAiModule
+import SaveLogs
 from discord.ext import commands
 from discord.utils import get
 from dotenv import load_dotenv
-from SaveLogs import FileEdit
+
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -25,13 +26,11 @@ async def test(ctx):
 @bot.command(name = 'artihelp')
 async def artihelp(ctx):
     response = '''
-**!gpt** пообщайтесь с chat-gtp! Артибот использует модель gpt-3.5-turbo.
-**!gpt clear_context** очищает контекст последних сообщений чата gpt'''
-
+**!gpt** <запрос> - чат ГПТ
+**!gpt clear_context** - удаление контекста ГПТ
+**!tr <текст> - перевод текста на русский язык
+'''
     await ctx.reply(response)
-
-gpt = MyOpenAiModule
-f = FileEdit()
 
 @bot.command(name = 'gpt')
 async def chat_gpt(ctx, *, message: str):
@@ -40,18 +39,18 @@ async def chat_gpt(ctx, *, message: str):
     filename = channel_name + '.txt'
 
     if message == 'clear_context':
-        f.clear_context(filename)
+        SaveLogs.clear_context(filename)
         await ctx.send('GPT контекст сброшен')
         return()
 
     username = ctx.author.display_name
-    f.write_to_file(filename, username, message)
+    SaveLogs.write_to_file(filename, username, message)
 
-    message = f.get_context(filename)
+    message = SaveLogs.get_context(filename)
     print (message)
 
-    response = await gpt.send_prompt(message) 
-    f.write_to_file(filename, 'assistant', response)
+    response = await MyOpenAiModule.send_prompt(message) 
+    SaveLogs.write_to_file(filename, 'assistant', response)
     print("assistant: " + response)
 
     await ctx.reply(response) 
@@ -82,7 +81,7 @@ async def on_member_join(member):
     guild = member.guild
     channel = guild.channels[0].channels[0]
     content = f'Поприветствуй нового участника {member} на сервере и поцелуй его'
-    response = await gpt.send_prompt(content)
+    response = await MyOpenAiModule.send_prompt(content)
     await channel.send(response)
     
 

@@ -11,8 +11,6 @@ client = AsyncOpenAI(
     )           
 
 async def send_prompt(content):
-  
-
     completion = await client.chat.completions.create(
         messages=[
             {
@@ -28,12 +26,5 @@ async def send_prompt(content):
     )
      
     response = completion.choices[0].message.content
-    '''
-    prompt_tokens = str(completion.usage.prompt_tokens)
-    completion_tokens = str(completion.usage.completion_tokens)
-    tokens_used = str(completion.usage.total_tokens)
-    print(prompt_tokens + ' токенов промпта\n' + 
-           completion_tokens + ' токенов ответа\n' + 
-           tokens_used + ' всего токенов использовано')
-    '''
+
     return(response)

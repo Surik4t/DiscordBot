@@ -81,6 +81,7 @@ async def translate(context):
         
         json = await response.json()
         response, lang_code = parse_response(json)
+        await session.close() 
         return(response, lang_code)
 
 #asyncio.run(translate('what is your name'))
