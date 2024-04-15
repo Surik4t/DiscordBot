@@ -1,15 +1,13 @@
 import os
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
+import asyncio
 
 load_dotenv()
-
 client = AsyncOpenAI(
-    #base_url = "https://s2.neuroapi.host/v1",
-    base_url = "https://neuroapi.host/v1",
-    api_key = os.environ.get("OPENAI_TOKEN"),
-    )           
-
+    api_key=os.environ.get("OPENAI_TOKEN"),
+    base_url="https://eu.neuroapi.host/v1"
+)
 async def send_prompt(content):
     completion = await client.chat.completions.create(
         messages=[
@@ -28,3 +26,6 @@ async def send_prompt(content):
     response = completion.choices[0].message.content
 
     return(response)
+
+
+asyncio.run(send_prompt('test'))

@@ -1,22 +1,21 @@
-import os
-import discord
-import YandexTranslate
-import MyOpenAiModule
-import SaveLogs
+import os, discord, base64, random
+import YandexTranslate, TextToImage, SaveLogs
+#import MyOpenAiModule
+
 from discord.ext import commands
 from discord.utils import get
 from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+FUSION_API_TOKEN = os.getenv('FUSION_API_TOKEN')
+FUSION_API_SECRET_TOKEN = os.getenv('FUSION_API_SECRET_TOKEN')
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
-# intents.voice_states = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
-
 
 @bot.command(name='artitest')
 async def test(ctx):
@@ -36,6 +35,24 @@ async def artihelp(ctx):
 
 @bot.command(name='gpt')
 async def chat_gpt(ctx, *, message: str):
+    phrase1 = [
+        'Они прикрыли бесплатное использование API...',
+        'Они убили нашего маленького бойкиссера!',
+        'GPT больше не работает',
+        "Бойкиссер умэр...",
+    ]
+    phrase2 = [
+        'Чертов капитализм!',
+        'Спи спокойно, маленький фурри ботик...',
+        'R.I.P.',
+        "И кто теперь будет целовать мальчиков? :'("
+    ]
+    random.shuffle(phrase1)
+    random.shuffle(phrase2)
+    await ctx.reply(f'{phrase1.pop()}\n{phrase2.pop()}')
+    '''
+                ОТКЛЮЧЕН БЕСПЛАТНЫЙ ДОСТУП К АПИ
+
     channel_name = ctx.channel.name
     filename = channel_name + '.txt'
 
@@ -56,6 +73,42 @@ async def chat_gpt(ctx, *, message: str):
 
     await ctx.reply(response)
 
+@bot.event
+async def on_member_join(member):
+    guild = member.guild
+    channel = guild.channels[0].channels[0]
+    content = f'Поприветствуй нового участника {member} на сервере и поцелуй его'
+    response = await MyOpenAiModule.send_prompt(content)
+    await channel.send(response)
+'''
+def base64ToImage(img_data):
+    with open("generated_image.jpg", "wb") as f:
+        f.write(base64.decodebytes(img_data))
+        print('image decoded')
+        f.close()
+@bot.command(name='pic')
+async def ConvertTextToImage(ctx, *, message: str):
+    api = TextToImage.Text2ImageAPI('https://api-key.fusionbrain.ai/', FUSION_API_TOKEN, FUSION_API_SECRET_TOKEN)
+    model_id = await api.get_model()
+    uuid = await api.generate(message, model_id)
+    waiting_phrases = [
+        'Секундочку...',
+        'Щас будет!',
+        'Еще немножко...',
+        'Секундочку, рисую картинку...',
+        'В процессе...',
+        'Еще парочка штрихов и...'
+    ]
+    random.shuffle(waiting_phrases)
+    await ctx.reply(waiting_phrases.pop())
+    images = await api.check_generation(uuid)
+
+    base64ToImage(images[0].encode())
+
+    with open('generated_image.jpg', 'rb') as f:
+        picture = discord.File(f)
+        await ctx.channel.send(file=picture)
+        f.close()
 
 @bot.command(name='tr')
 async def yandex_translate(ctx, *, message: str):
@@ -76,16 +129,6 @@ async def on_error(event, *args):
             f.write(f'Unhandled message: {args[0]}\n')
         else:
             raise
-
-
-@bot.event
-async def on_member_join(member):
-    guild = member.guild
-    channel = guild.channels[0].channels[0]
-    content = f'Поприветствуй нового участника {member} на сервере и поцелуй его'
-    response = await MyOpenAiModule.send_prompt(content)
-    await channel.send(response)
-
 
 @bot.event
 async def on_voice_state_update(member, before, after):
