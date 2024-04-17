@@ -1,7 +1,8 @@
-import os, discord, base64, random
-import YandexTranslate, TextToImage, SaveLogs
+import os, discord, base64, random, json
+import YandexTranslate, SaveLogs
 #import MyOpenAiModule
-
+from TextToImage import Text2ImageAPI
+from fusion_model_settings import FusionModelStyleSettings
 from discord.ext import commands
 from discord.utils import get
 from dotenv import load_dotenv
@@ -22,7 +23,6 @@ async def test(ctx):
     response = "Да-да, я живой"
     await ctx.send(response)
 
-
 @bot.command(name='artihelp')
 async def artihelp(ctx):
     response = '''
@@ -31,7 +31,6 @@ async def artihelp(ctx):
 **!tr <текст> - перевод текста на русский язык
 '''
     await ctx.reply(response)
-
 
 @bot.command(name='gpt')
 async def chat_gpt(ctx, *, message: str):
@@ -81,16 +80,51 @@ async def on_member_join(member):
     response = await MyOpenAiModule.send_prompt(content)
     await channel.send(response)
 '''
+
+@bot.command(name='test')
+async def test(ctx):
+    fusionAiSettingsSet('{"style": "anime"}')
+    params = fusionAiSettingsGet()
+    print(params)
+    print(type(params))
+
 def base64ToImage(img_data):
     with open("generated_image.jpg", "wb") as f:
         f.write(base64.decodebytes(img_data))
         print('image decoded')
-        f.close()
+
+def fusionAiSettingsSet(data):
+    with open('fusionAiSettings.txt', 'w') as file:
+        file.write(data)
+
+def fusionAiSettingsGet():
+    with open('fusionAiSettings.txt', 'r') as file:
+        data = file.read()
+        params = json.loads(data)
+        return params
+
 @bot.command(name='pic')
 async def ConvertTextToImage(ctx, *, message: str):
-    api = TextToImage.Text2ImageAPI('https://api-key.fusionbrain.ai/', FUSION_API_TOKEN, FUSION_API_SECRET_TOKEN)
+    if message.lower() == 'help':
+        await ctx.reply('Пиши **!pic ratio** чтобы изменить формат, **!pic style** чтобы выбрать стиль')
+        return
+    if message.lower() == 'style':
+        view = FusionModelStyleSettings()
+        await ctx.reply("Menu", view=view)
+        await view.wait()
+        style = view.style
+        style_settings = fusionAiSettingsGet()
+        style_settings["style"] = style
+        fusionAiSettingsSet(json.dumps(style_settings))
+        return
+    if message.lower() == 'ratio':
+        await ctx.reply('Функция пока не работает')
+        return
+
+    api = Text2ImageAPI('https://api-key.fusionbrain.ai/', FUSION_API_TOKEN, FUSION_API_SECRET_TOKEN)
     model_id = await api.get_model()
-    uuid = await api.generate(message, model_id)
+    settings = fusionAiSettingsGet()
+    uuid = await api.generate(message, model_id, settings)
     waiting_phrases = [
         'Секундочку...',
         'Щас будет!',
@@ -107,20 +141,17 @@ async def ConvertTextToImage(ctx, *, message: str):
 
     with open('generated_image.jpg', 'rb') as f:
         picture = discord.File(f)
-        await ctx.channel.send(file=picture)
-        f.close()
+        await ctx.reply(file=picture)
 
 @bot.command(name='tr')
 async def yandex_translate(ctx, *, message: str):
     response, lang = await YandexTranslate.translate(message)
     await ctx.reply(f'*Автоопределение языка: {lang}* \n{response}')
 
-
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.errors.CheckFailure):
         await ctx.send('Недостаточно прав')
-
 
 @bot.event
 async def on_error(event, *args):
@@ -146,7 +177,6 @@ async def on_voice_state_update(member, before, after):
     if before.channel.category == vc_maker.category and before.channel != vc_maker and len(before.channel.members) == 0:
         await before.channel.delete()
 
-
 async def voice_channel_create(channel, ch_name, member):
     new_channel = await channel.guild.create_voice_channel(name=ch_name,
                                                            category=channel.category,
@@ -158,6 +188,5 @@ async def voice_channel_create(channel, ch_name, member):
                                       manage_permissions=True,
                                       create_instant_invite=True)
     return new_channel
-
 
 bot.run(TOKEN)
