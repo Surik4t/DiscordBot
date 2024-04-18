@@ -1,8 +1,8 @@
 import os, discord, base64, random, json
-import YandexTranslate, SaveLogs
-#import MyOpenAiModule
+import SaveLogs
+#import MyOpenAiModule, YandexTranslate
 from TextToImage import Text2ImageAPI
-from fusion_model_settings import FusionModelStyleSettings
+from fusion_model_settings import FusionModelStyleSettings, FusionModelRatioSettings
 from discord.ext import commands
 from discord.utils import get
 from dotenv import load_dotenv
@@ -28,7 +28,9 @@ async def artihelp(ctx):
     response = '''
 **!gpt** <запрос> - чат ГПТ
 **!gpt clear_context** - удаление контекста ГПТ
-**!tr <текст> - перевод текста на русский язык
+**!tr <текст>** - перевод текста на русский язык
+**!pic <запрос>** - генерация картинки
+**!pic help** - доп параметры генерации
 '''
     await ctx.reply(response)
 
@@ -110,15 +112,23 @@ async def ConvertTextToImage(ctx, *, message: str):
         return
     if message.lower() == 'style':
         view = FusionModelStyleSettings()
-        await ctx.reply("Menu", view=view)
+        await ctx.reply(view=view)
         await view.wait()
         style = view.style
-        style_settings = fusionAiSettingsGet()
-        style_settings["style"] = style
-        fusionAiSettingsSet(json.dumps(style_settings))
+        settings = fusionAiSettingsGet()
+        settings["style"] = style
+        fusionAiSettingsSet(json.dumps(settings))
         return
     if message.lower() == 'ratio':
-        await ctx.reply('Функция пока не работает')
+        view = FusionModelRatioSettings()
+        await ctx.reply(view=view)
+        await view.wait()
+        height, width = view.height, view.width
+        settings = fusionAiSettingsGet()
+        settings["height"] = height
+        settings["width"] = width
+        fusionAiSettingsSet(json.dumps(settings))
+        return
         return
 
     api = Text2ImageAPI('https://api-key.fusionbrain.ai/', FUSION_API_TOKEN, FUSION_API_SECRET_TOKEN)

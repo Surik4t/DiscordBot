@@ -18,13 +18,13 @@ class Text2ImageAPI:
         print('model set')
         return data[0]['id']
 
-    async def generate(self, prompt, model, settings, images=1, width=1024, height=1024):
+    async def generate(self, prompt, model, settings, images=1):
         params = {
             "type": "GENERATE",
             "numImages": images,
             "style": settings["style"],
-            "width": width,
-            "height": height,
+            "width": settings["width"],
+            "height": settings["height"],
             "generateParams": {
             "query": f"{prompt}"
             }
