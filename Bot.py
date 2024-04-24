@@ -1,6 +1,7 @@
 import os, discord, base64, random, json
-import SaveLogs
+import SaveLogs, horoscope
 #import MyOpenAiModule, YandexTranslate
+from choose_zodiac_menu import zodiac_settings
 from TextToImage import Text2ImageAPI
 from fusion_model_settings import FusionModelStyleSettings, FusionModelRatioSettings
 from discord.ext import commands
@@ -105,8 +106,17 @@ def fusionAiSettingsGet():
         params = json.loads(data)
         return params
 
+@bot.command(name='zodiac')
+async def zodiac(ctx):
+    view = zodiac_settings()
+    await ctx.reply("Выбери знак зодиака", view=view)
+    await view.wait()
+    zodiac_sign = view.zodiac_sign
+    text = await horoscope.get_horoscope(zodiac_sign)
+    await ctx.reply(horoscope.parse(text))
+
 @bot.command(name='pic')
-async def ConvertTextToImage(ctx, *, message: str):
+async def convertTextToImage(ctx, *, message: str):
     if message.lower() == 'help':
         await ctx.reply('Пиши **!pic ratio** чтобы изменить формат, **!pic style** чтобы выбрать стиль')
         return
@@ -128,7 +138,6 @@ async def ConvertTextToImage(ctx, *, message: str):
         settings["height"] = height
         settings["width"] = width
         fusionAiSettingsSet(json.dumps(settings))
-        return
         return
 
     api = Text2ImageAPI('https://api-key.fusionbrain.ai/', FUSION_API_TOKEN, FUSION_API_SECRET_TOKEN)
