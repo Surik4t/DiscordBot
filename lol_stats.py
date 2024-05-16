@@ -2,7 +2,7 @@ import requests, json, asyncio
 
 api_key = 'RGAPI-a1bf9814-7e29-4ad2-b525-f36e4e5f819b'
 
-def get_puuid(player_name, tag='EUW', region='europe'):
+async def get_puuid(player_name, tag, region='europe'):
     url = f'https://{region}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{player_name}/{tag}'
 
     result = requests.get(url + f'?api_key={api_key}')
@@ -11,7 +11,7 @@ def get_puuid(player_name, tag='EUW', region='europe'):
     return puuid
 
 
-def get_matches(puuid, region='europe', number=5):
+async def get_matches(puuid, region='europe', number=5):
     if number > 20:
         number = 20
 
@@ -23,7 +23,7 @@ def get_matches(puuid, region='europe', number=5):
     return matches
 
 
-def get_match(puuid, match_id, region='europe'):
+async def get_match(puuid, match_id, region='europe'):
     url = f'https://{region}.api.riotgames.com/lol/match/v5/matches/{match_id}?api_key={api_key}'
     result = requests.get(url)
     data = json.loads(result.text)
@@ -44,12 +44,15 @@ def parse_data(data, puuid):
         'deaths': player_info['deaths'],
         'assists': player_info['assists']
     }
-    result['KDA'] = format((result['kills'] + result['assists']) / result['deaths'], '.2f')
+    if result['deaths'] == 0:
+        result['KDA'] = 'Perfect'
+    else:
+        result['KDA'] = format((result['kills'] + result['assists']) / result['deaths'], '.2f')
 
     if player_info['win']:
-        result['win'] = 'Win'
+        result['game_result'] = 'Win'
     else:
-        result['win'] = 'Lose'
+        result['game_result'] = 'Lose'
 
     for id in queue_ids:
         if id['queueId'] == data['info']['queueId']:
@@ -63,18 +66,19 @@ def get_queue_ids():
     ids = json.loads(result.text)
     return ids
 
+def make_readable(history):
+    result = ''
+    for match in history:
+        result += f"- **{match['game_result']}** | {match['gamemode']} | {match['role']} {match['champion']} lvl: {match['lvl']} || {match['kills']}/{match['deaths']}/{match['assists']} **KDA : {match['KDA']}**\n"
+    return result
 
-def match_stats(player_name, player_tag, matches_number=10):
-    id = get_puuid(player_name, player_tag)
-    matches = get_matches(id, number=matches_number)
-    player_stats = [get_match(id, match) for match in matches]
 
-    return player_stats
+async def match_history(player_name, player_tag='EUW', matches_number=5, *args):
+    id = await get_puuid(player_name, player_tag)
+    matches = await get_matches(id, number=int(matches_number))
+    history = [await get_match(id, match) for match in matches]
+    stats = make_readable(history)
 
+    return stats
 
 queue_ids = get_queue_ids()
-
-stats = match_stats('artishpalk', 'EUW')
-
-for stat in stats:
-    print(stat)

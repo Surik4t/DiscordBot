@@ -1,6 +1,8 @@
 import os, discord, base64, random, json
 import SaveLogs, horoscope
+
 #import MyOpenAiModule, YandexTranslate
+from lol_stats import match_history
 from choose_zodiac_menu import zodiac_settings
 from TextToImage import Text2ImageAPI
 from fusion_model_settings import FusionModelStyleSettings, FusionModelRatioSettings
@@ -34,6 +36,24 @@ async def artihelp(ctx):
 **!pic help** - доп параметры генерации
 '''
     await ctx.reply(response)
+
+
+@bot.command(name='stats')
+async def league_match_history(ctx, *, message: str):
+    if message.lower() == 'help':
+        await ctx.reply('Статистика последних игр: **/stats riot_id tag number_of_games**,\n'
+                        'где *tag* и *number_of_games* - необязательные параметры *(по дефолту tag=EUW, number_of_games=5)*\n'
+                        '||Пример: **/stats artishpalk EUW 3** покажет статистику последних трех игр игрока artishpalk#EUW||')
+        return
+
+    params = message.split()
+    args = [arg for arg in params]
+    await ctx.reply(f'Собираю статистику последних игр для {params[0]}...')
+
+    stats = await match_history(*args)
+
+    await ctx.reply(f'{stats}')
+
 
 @bot.command(name='gpt')
 async def chat_gpt(ctx, *, message: str):
@@ -161,12 +181,14 @@ async def convertTextToImage(ctx, *, message: str):
     with open('generated_image.jpg', 'rb') as f:
         picture = discord.File(f)
         await ctx.reply(file=picture)
-
+'''
+            КОНЧИЛСЯ ТЕСТОВЫЙ ПЕРИОД 
+            
 @bot.command(name='tr')
 async def yandex_translate(ctx, *, message: str):
     response, lang = await YandexTranslate.translate(message)
     await ctx.reply(f'*Автоопределение языка: {lang}* \n{response}')
-
+'''
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.errors.CheckFailure):
