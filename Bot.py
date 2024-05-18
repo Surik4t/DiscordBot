@@ -2,7 +2,7 @@ import os, discord, base64, random, json
 import SaveLogs, horoscope
 
 #import MyOpenAiModule, YandexTranslate
-from lol_stats import match_history
+from lol_stats import match_history, current_rank
 from choose_zodiac_menu import zodiac_settings
 from TextToImage import Text2ImageAPI
 from fusion_model_settings import FusionModelStyleSettings, FusionModelRatioSettings
@@ -42,17 +42,32 @@ async def artihelp(ctx):
 async def league_match_history(ctx, *, message: str):
     if message.lower() == 'help':
         await ctx.reply('Статистика последних игр: **/stats riot_id tag number_of_games**,\n'
-                        'где *tag* и *number_of_games* - необязательные параметры *(по дефолту tag=EUW, number_of_games=5)*\n'
+                        'где *tag* и *number_of_games* - необязательные параметры *(по дефолту tag=EUW, number_of_games=5)*\n\n'
                         '||Пример: **/stats artishpalk EUW 3** покажет статистику последних трех игр игрока artishpalk#EUW||')
         return
 
     params = message.split()
     args = [arg for arg in params]
-    await ctx.reply(f'Собираю статистику последних игр для {params[0]}...')
+    await ctx.reply(f'Собираю статистику последних игр {params[0]}...')
 
     stats = await match_history(*args)
 
     await ctx.reply(f'{stats}')
+
+
+@bot.command(name='rank')
+async def league_rank(ctx, *, message: str):
+    if message.lower() == 'help':
+        await ctx.reply('Текущий ранг игрока: **/rank riot_id tag server**,\n'
+                        'где *tag* и *server* - необязательные параметры *(по дефолту tag=EUW, server=euw1)*\n'
+                        'возможные значения параметра server {euw1, eun1, na1, ru, kr, oc1}\n\n'
+                        '||Пример: **/rank artishpalk EUW euw1** покажет ранг игрока artishpalk#EUW на euw1 сервере||')
+        return
+    params = message.split()
+    args = [arg for arg in params]
+
+    ranks_data = await current_rank(*args)
+    await ctx.reply(f'{ranks_data}')
 
 
 @bot.command(name='gpt')
