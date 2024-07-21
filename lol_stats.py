@@ -1,6 +1,6 @@
 import requests, json, asyncio
 
-api_key = 'RGAPI-a1bf9814-7e29-4ad2-b525-f36e4e5f819b'
+api_key = 'RGAPI-fa0a0d07-e808-4c36-b33d-93f174d25351'
 
 async def current_rank(player_name, player_tag='EUW', server='euw1'):
     status, puuid_answer = await get_puuid(player_name, player_tag)

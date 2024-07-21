@@ -72,23 +72,8 @@ async def league_rank(ctx, *, message: str):
 
 @bot.command(name='gpt')
 async def chat_gpt(ctx, *, message: str):
-    phrase1 = [
-        'Они прикрыли бесплатное использование API...',
-        'Они убили нашего маленького бойкиссера!',
-        'GPT больше не работает',
-        "Бойкиссер умэр...",
-    ]
-    phrase2 = [
-        'Чертов капитализм!',
-        'Спи спокойно, маленький фурри ботик...',
-        'R.I.P.',
-        "И кто теперь будет целовать мальчиков? :'("
-    ]
-    random.shuffle(phrase1)
-    random.shuffle(phrase2)
-    await ctx.reply(f'{phrase1.pop()}\n{phrase2.pop()}')
     '''
-                ОТКЛЮЧЕН БЕСПЛАТНЫЙ ДОСТУП К АПИ
+                ОТКЛЮЧЕН ДОСТУП К АПИ
 
     channel_name = ctx.channel.name
     filename = channel_name + '.txt'
@@ -196,6 +181,7 @@ async def convertTextToImage(ctx, *, message: str):
     with open('generated_image.jpg', 'rb') as f:
         picture = discord.File(f)
         await ctx.reply(file=picture)
+
 '''
             КОНЧИЛСЯ ТЕСТОВЫЙ ПЕРИОД 
             
