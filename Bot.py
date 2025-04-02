@@ -1,6 +1,6 @@
 import os, discord, base64, random, json
 import SaveLogs, horoscope
-
+import MyOpenAiModule
 #import MyOpenAiModule, YandexTranslate
 from lol_stats import match_history, current_rank
 from choose_zodiac_menu import zodiac_settings
@@ -29,7 +29,7 @@ async def test(ctx):
 @bot.command(name='artihelp')
 async def artihelp(ctx):
     response = '''
-**!gpt** <запрос> - чат ГПТ
+**!gpt <запрос>** - чат ГПТ
 **!gpt clear_context** - удаление контекста ГПТ
 **!tr <текст>** - перевод текста на русский язык
 **!pic <запрос>** - генерация картинки
@@ -72,8 +72,6 @@ async def league_rank(ctx, *, message: str):
 
 @bot.command(name='gpt')
 async def chat_gpt(ctx, *, message: str):
-    '''
-                ОТКЛЮЧЕН ДОСТУП К АПИ
 
     channel_name = ctx.channel.name
     filename = channel_name + '.txt'
@@ -102,7 +100,6 @@ async def on_member_join(member):
     content = f'Поприветствуй нового участника {member} на сервере и поцелуй его'
     response = await MyOpenAiModule.send_prompt(content)
     await channel.send(response)
-'''
 
 @bot.command(name='test')
 async def test(ctx):

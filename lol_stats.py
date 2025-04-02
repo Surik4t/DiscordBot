@@ -1,6 +1,7 @@
-import requests, json, asyncio
-
-api_key = 'RGAPI-fa0a0d07-e808-4c36-b33d-93f174d25351'
+import requests, json, asyncio, os
+from dotenv import load_dotenv
+load_dotenv()
+api_key = os.getenv('LoL_API_KEY')
 
 async def current_rank(player_name, player_tag='EUW', server='euw1'):
     status, puuid_answer = await get_puuid(player_name, player_tag)
