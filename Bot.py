@@ -1,11 +1,9 @@
 import os, discord, base64, random, json
-import SaveLogs, horoscope
-import MyOpenAiModule
-#import MyOpenAiModule, YandexTranslate
-from lol_stats import match_history, current_rank
-from choose_zodiac_menu import zodiac_settings
-from TextToImage import Text2ImageAPI
-from fusion_model_settings import FusionModelStyleSettings, FusionModelRatioSettings
+from Modules import MyOpenAiModule, horoscope, SaveLogs, YandexTranslate
+from Modules.lol_stats import match_history, current_rank
+from Modules.choose_zodiac_menu import zodiac_settings
+from Modules.TextToImage import Text2ImageAPI
+from Modules.fusion_model_settings import FusionModelStyleSettings, FusionModelRatioSettings
 from discord.ext import commands
 from discord.utils import get
 from dotenv import load_dotenv
@@ -179,14 +177,11 @@ async def convertTextToImage(ctx, *, message: str):
         picture = discord.File(f)
         await ctx.reply(file=picture)
 
-'''
-            КОНЧИЛСЯ ТЕСТОВЫЙ ПЕРИОД 
-            
 @bot.command(name='tr')
 async def yandex_translate(ctx, *, message: str):
     response, lang = await YandexTranslate.translate(message)
     await ctx.reply(f'*Автоопределение языка: {lang}* \n{response}')
-'''
+
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.errors.CheckFailure):

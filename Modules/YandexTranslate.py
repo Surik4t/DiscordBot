@@ -2,13 +2,6 @@ import asyncio
 import os
 import aiohttp
 
-def get_IAM_token():
-    file = open('IAM_token.txt', 'r')
-    token = file.read().strip()
-    file.close()
-    return(token)
-
-
 def parse_response(text):
     text = dict(text['translations'][0])
 
@@ -56,31 +49,32 @@ lang = {'ar': 'арабский',
         'vi': 'вьетнамский'
         }
 
-IAM_TOKEN = get_IAM_token()
+IAM_TOKEN = os.getenv('IAM_TOKEN')
 folder_id = os.getenv('FOLDER_ID')
 target_language = 'ru'
 
 async def translate(context):
-    async with aiohttp.ClientSession() as session:
-        body = {
-            "targetLanguageCode": target_language,
-            "texts": context,
-            "folderId": folder_id,
-            }
+    try:
+        async with aiohttp.ClientSession() as session:
+            body = {
+                "targetLanguageCode": target_language,
+                "texts": context,
+                "folderId": folder_id,
+                }
 
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {IAM_TOKEN}"
-            }
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {IAM_TOKEN}"
+                }
 
-        response = await session.post('https://translate.api.cloud.yandex.net/translate/v2/translate',
-                                 json = body,
-                                 headers = headers
-                                 )
+            response = await session.post('https://translate.api.cloud.yandex.net/translate/v2/translate',
+                                     json = body,
+                                     headers = headers
+                                     )
 
-        json = await response.json()
-        response, lang_code = parse_response(json)
-        await session.close()
-        return(response, lang_code)
-
-#asyncio.run(translate('what is your name'))
+            json = await response.json()
+            response, lang_code = parse_response(json)
+            await session.close()
+            return(response, lang_code)
+    except Exception as e:
+        print(f"Yandex translate exception: {e}")
