@@ -3,4 +3,5 @@
 *.log
 *.jpg
 .idea/
+/match_stats
 __pycache__
