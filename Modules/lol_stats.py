@@ -1,132 +1,187 @@
-import requests, json, asyncio, os
-from dotenv import load_dotenv
+import os, requests, json
+from dotenv import load_dotenv, find_dotenv
+
 load_dotenv()
-api_key = os.getenv('LoL_API_KEY')
 
-async def current_rank(player_name, player_tag='EUW', server='euw1'):
-    status, puuid_answer = await get_puuid(player_name, player_tag)
-    if status != 200:
-        return puuid_answer
-    summoner_info = await get_summoner_info(puuid_answer, server)
-    if 'status' in summoner_info:
-        print(type(summoner_info['status']))
-        return summoner_info['status']['message']
-
-    league_entries = await get_league_entries(summoner_info['id'], server)
-    if len(league_entries) == 0:
-        return 'Нет информации'
-
-    result = parse_league_entries(league_entries)
-    return result
+LOL_API_KEY = os.getenv("LOL_API_KEY")
 
 
-def parse_league_entries(entries):
-    result = ''
-    for entry in entries:
-        result += (f"- {entry['queueType']} | **{entry['tier']} {entry['rank']} {entry['leaguePoints']} LP** | "
-                   f"*wins: {entry['wins']} losses: {entry['losses']}* \n")
-    return result
+def get_account_by_riot_id(name, tag="euw", region="europe"):
+    URL = f"https://{region}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{name}/{tag}"
+    response = requests.get(URL, headers={"X-Riot-Token": LOL_API_KEY})
+    if response.status_code != 200:
+        error = response.json()["status"]
+        raise Exception(f"{error["status_code"]}: {error["message"]}")
+    return json.loads(response.text)
 
 
-async def get_league_entries(id, server):
-    url = f'https://{server}.api.riotgames.com/lol/league/v4/entries/by-summoner/'
-    params = f'{id}?api_key={api_key}'
-    result = requests.get(url + params)
-    entries = json.loads(result.text)
-    return entries
+def get_match_ids_by_puuid(puuid, region="europe", count=1):
+    URL = f"https://{region}.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?type=ranked&start=0&count={count}"
+    response = requests.get(URL, headers={"X-Riot-Token": LOL_API_KEY})
+    if response.status_code != 200:
+        error = response.json()["status"]
+        raise Exception(f"{error["status_code"]}: {error["message"]}")
+    return json.loads(response.text)
 
 
-async def get_summoner_info(puuid, server='euw1'):
-    url = f'https://{server}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/'
-    params = f'{puuid}?api_key={api_key}'
-    result = requests.get(url + params)
-    summoner_info = json.loads(result.text)
-    return summoner_info
+def get_match_by_match_id(match_id, region="europe"):
+    URL = f"https://{region}.api.riotgames.com/lol/match/v5/matches/{match_id}"
+    response = requests.get(URL, headers={"X-Riot-Token": LOL_API_KEY})
+    if response.status_code != 200:
+        error = response.json()["status"]
+        raise Exception(f"{error["status_code"]}: {error["message"]}")
+    return json.loads(response.text)
 
 
-async def get_puuid(player_name, tag, region='europe'):
-    url = f'https://{region}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{player_name}/{tag}'
-
-    result = requests.get(url + f'?api_key={api_key}')
-    res_dict = json.loads(result.text)
-    if result.status_code != 200:
-        return result.status_code, res_dict['status']['message']
-
-    puuid = res_dict['puuid']
-    return result.status_code, puuid
+def save_match_stats(match_ids: list):
+    for match_id in match_ids:
+        if os.path.exists(f"match_stats/{match_id}.json"):
+            continue
+        with open(f"match_stats/{match_id}.json", "w+", encoding="utf-8") as file:
+            match_stats = get_match_by_match_id(match_id)
+            json.dump(match_stats, file, indent=4)
 
 
-async def get_matches(puuid, region='europe', number=5):
-    if number > 20:
-        number = 20
-
-    url = f'https://{region}.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}'
-    params = f'/ids?start=0&count={number}&api_key={api_key}'
-    result = requests.get(url + params)
-    matches = json.loads(result.text)
-
-    return matches
+def load_match_stats(match_id):
+    try:
+        with open(f"match_stats/{match_id}.json", "r", encoding="utf-8") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        print(f"match {match_id} not found")
 
 
-async def get_match(puuid, match_id, region='europe'):
-    url = f'https://{region}.api.riotgames.com/lol/match/v5/matches/{match_id}?api_key={api_key}'
-    result = requests.get(url)
-    data = json.loads(result.text)
+def create_dir(dir_name):
+    try:
+        os.makedirs(dir_name)
+    except FileExistsError as e:
+        pass
 
-    return parse_data(data, puuid)
+
+def get_table_with_stats(stats):
+    names, champ_names, positions, KDAs = [], [], [], []
+    players = []
+
+    blue_result = "WON" if stats["info"]["teams"][0]["win"] else "LOST"
+    red_result = "WON" if stats["info"]["teams"][1]["win"] else "LOST"
+
+    all_players_stats = stats["info"]["participants"]
+
+    for player in all_players_stats:
+        name = f"{player["riotIdGameName"]}#{player["riotIdTagline"]}"
+        names.append(name)
+        champ_names.append(player["championName"])
+        positions.append(
+            player["individualPosition"].title()
+            if player["individualPosition"] != "UTILITY"
+            else "Support"
+        )
+        KDAs.append(f"{player["kills"]} / {player["deaths"]} / {player["assists"]}")
+
+        total_pings = (
+            player["allInPings"]
+            + player["assistMePings"]
+            + player["basicPings"]
+            + player["commandPings"]
+            + player["dangerPings"]
+            + player["enemyMissingPings"]
+            + player["enemyVisionPings"]
+            + player["getBackPings"]
+            + player["holdPings"]
+            + player["needVisionPings"]
+            + player["onMyWayPings"]
+            + player["pushPings"]
+            + player["retreatPings"]
+            + player["visionClearedPings"]
+        )
+        players.append(
+            {
+                "ability_uses": player["challenges"]["abilityUses"],
+                "damage_taken_percent": player["challenges"][
+                    "damageTakenOnTeamPercentage"
+                ],
+                "damage_taken": player["totalDamageTaken"],
+                "damage_to_buildings": player["damageDealtToBuildings"],
+                "damage_to_champions": player["totalDamageDealtToChampions"],
+                "gold_earned": player["goldEarned"],
+                "largest_crit": player["largestCriticalStrike"],
+                "bounty_gold": player["challenges"]["bountyGold"],
+                "name": name,
+                "skillshots_dodged": player["challenges"]["skillshotsDodged"],
+                "time_spent_dead": player["totalTimeSpentDead"],
+                "total_pings": total_pings,
+            }
+        )
+
+    longest_position = len(max(positions, key=len))
+    longest_name = len(max(names, key=len))
+    longest_champ_name = len(max(champ_names, key=len))
+
+    table = ""
+    counter = 0
+    for name, champ_name, position, kda in zip(names, champ_names, positions, KDAs):
+        if counter == 0:
+            table += f"Blue team - {blue_result}\n"
+        if counter == 5:
+            table += f"Red team - {red_result}\n"
+        counter += 1
+        table += f"{position.ljust(longest_position)} | {champ_name:{longest_champ_name}} | {name:{longest_name}} | {kda:>}\n"
+
+    return (table, players)
 
 
-def parse_data(data, puuid):
-    player_index = data['metadata']['participants'].index(puuid)
-    player_info = data['info']['participants'][player_index]
+def get_achivements(players):
+    best_dd = sorted(players, key=lambda x: x["damage_to_champions"])[-1]
+    best_pusher = sorted(players, key=lambda x: x["damage_to_buildings"])[-1]
+    best_tank = sorted(players, key=lambda x: x["damage_taken"])[-1]
+    biggest_shark = sorted(players, key=lambda x: x["gold_earned"])[-1]
+    most_annoying = sorted(players, key=lambda x: x["total_pings"])[-1]
+    one_punch_man = sorted(players, key=lambda x: x["largest_crit"])[-1]
+    resident_sleeper = sorted(players, key=lambda x: x["time_spent_dead"])[-1]
+    scripter = sorted(players, key=lambda x: x["skillshots_dodged"])[-1]
 
-    result = {
-        #'name': player_info['summonerName'],
-        'role': player_info['teamPosition'],
-        'champion': player_info['championName'],
-        'lvl': player_info['champLevel'],
-        'kills': player_info['kills'],
-        'deaths': player_info['deaths'],
-        'assists': player_info['assists']
+    achivements = {
+        "Best Damage Dealer": f"{best_dd["name"]:25}| damage to enemy champions: {best_dd["damage_to_champions"]}",
+        "Best Tank": f"{best_tank["name"]:25}| damage taken: {best_tank["damage_taken"]} (team percentage: {round(best_tank["damage_taken_percent"]*100, 2)}%)",
+        "Best Pusher": f"{best_pusher["name"]:25}| damage delt to structures: {best_pusher["damage_to_buildings"]}",
+        "Biggest Shark": f"{biggest_shark["name"]:25}| total gold earned: {biggest_shark["gold_earned"]}",
+        "One Punch Man": f"{one_punch_man["name"]:25}| largest crit: {one_punch_man["largest_crit"]}",
+        "Scripter": f"{scripter["name"]:25}| skillshots dodged: {scripter["skillshots_dodged"]}",
+        "Resident Sleeper": f"{resident_sleeper["name"]:25}| time spent dead: {resident_sleeper["time_spent_dead"]} seconds",
+        "Most Annoying": f"{most_annoying["name"]:25}| total pings: {most_annoying["total_pings"]}",
     }
-    if result['deaths'] == 0:
-        result['KDA'] = 'Perfect'
+
+    return achivements
+
+
+def parse_message(message):
+    if " " in message:
+        split_message = message.split()
+        name, tag = split_message[0].split("#")
+        region = split_message[1]
+        return (name, tag, region)
+    elif "#" in message:
+        name, tag = message.split("#")
+        return (name, tag)
     else:
-        result['KDA'] = format((result['kills'] + result['assists']) / result['deaths'], '.2f')
-
-    if player_info['win']:
-        result['game_result'] = 'Win'
-    else:
-        result['game_result'] = 'Lose'
-
-    for id in queue_ids:
-        if id['queueId'] == data['info']['queueId']:
-            result['gamemode'] = id['description']
-
-    return result
-
-def get_queue_ids():
-    url = 'https://static.developer.riotgames.com/docs/lol/queues.json'
-    result = requests.get(url)
-    ids = json.loads(result.text)
-    return ids
-
-def make_readable(history):
-    result = ''
-    for match in history:
-        result += (f"- **{match['game_result']}** | {match['gamemode']} | {match['role']} {match['champion']} lvl: {match['lvl']} || "
-                   f"{match['kills']}/{match['deaths']}/{match['assists']} **KDA : {match['KDA']}**\n")
-    return result
+        return (message,)
 
 
-async def match_history(player_name, player_tag='EUW', matches_number=5, *args):
-    status_code, puuid_answer = await get_puuid(player_name, player_tag)
-    if status_code != 200:
-        return puuid_answer
-    matches = await get_matches(puuid_answer, number=int(matches_number))
-    history = [await get_match(puuid_answer, match) for match in matches]
-    stats = make_readable(history)
+async def get_game_stats(message): 
+    try:
+        args = parse_message(message)
+        account = get_account_by_riot_id(*args)
+        match_ids = get_match_ids_by_puuid(account["puuid"], count=1)
+    except Exception as e:
+        return e
 
-    return stats
+    create_dir("match_stats")
+    save_match_stats(match_ids)
 
-queue_ids = get_queue_ids()
+    stats = load_match_stats(match_ids[0])
+    result, players_stats = get_table_with_stats(stats)
+
+    result += "\n"
+    for achivement, achiver in get_achivements(players_stats).items():
+        result += f"{achivement:20}: {achiver}\n"
+    #print(result)
+    return "```" + result + "```"

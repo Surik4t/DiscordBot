@@ -1,6 +1,7 @@
 import os, discord, base64, random, json
+import wikipedia
 from Modules import MyOpenAiModule, horoscope, SaveLogs, YandexTranslate
-from Modules.lol_stats import match_history, current_rank
+from Modules.lol_stats import get_game_stats
 from Modules.choose_zodiac_menu import zodiac_settings
 from Modules.TextToImage import Text2ImageAPI
 from Modules.fusion_model_settings import FusionModelStyleSettings, FusionModelRatioSettings
@@ -12,6 +13,7 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 FUSION_API_TOKEN = os.getenv('FUSION_API_TOKEN')
 FUSION_API_SECRET_TOKEN = os.getenv('FUSION_API_SECRET_TOKEN')
+
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -38,34 +40,8 @@ async def artihelp(ctx):
 
 @bot.command(name='stats')
 async def league_match_history(ctx, *, message: str):
-    if message.lower() == 'help':
-        await ctx.reply('Статистика последних игр: **/stats riot_id tag number_of_games**,\n'
-                        'где *tag* и *number_of_games* - необязательные параметры *(по дефолту tag=EUW, number_of_games=5)*\n\n'
-                        '||Пример: **/stats artishpalk EUW 3** покажет статистику последних трех игр игрока artishpalk#EUW||')
-        return
-
-    params = message.split()
-    args = [arg for arg in params]
-    await ctx.reply(f'Собираю статистику последних игр {params[0]}...')
-
-    stats = await match_history(*args)
-
-    await ctx.reply(f'{stats}')
-
-
-@bot.command(name='rank')
-async def league_rank(ctx, *, message: str):
-    if message.lower() == 'help':
-        await ctx.reply('Текущий ранг игрока: **/rank riot_id tag server**,\n'
-                        'где *tag* и *server* - необязательные параметры *(по дефолту tag=EUW, server=euw1)*\n'
-                        'возможные значения параметра server {euw1, eun1, na1, ru, kr, oc1}\n\n'
-                        '||Пример: **/rank artishpalk EUW euw1** покажет ранг игрока artishpalk#EUW на euw1 сервере||')
-        return
-    params = message.split()
-    args = [arg for arg in params]
-
-    ranks_data = await current_rank(*args)
-    await ctx.reply(f'{ranks_data}')
+    result = await get_game_stats(message)
+    await ctx.reply(f'{result}')
 
 
 @bot.command(name='gpt')
@@ -91,6 +67,7 @@ async def chat_gpt(ctx, *, message: str):
 
     await ctx.reply(response)
 
+
 @bot.event
 async def on_member_join(member):
     guild = member.guild
@@ -99,6 +76,7 @@ async def on_member_join(member):
     response = await MyOpenAiModule.send_prompt(content)
     await channel.send(response)
 
+
 @bot.command(name='test')
 async def test(ctx):
     fusionAiSettingsSet('{"style": "anime"}')
@@ -106,20 +84,24 @@ async def test(ctx):
     print(params)
     print(type(params))
 
+
 def base64ToImage(img_data):
     with open("generated_image.jpg", "wb") as f:
         f.write(base64.decodebytes(img_data))
         print('image decoded')
 
+
 def fusionAiSettingsSet(data):
     with open('fusionAiSettings.txt', 'w') as file:
         file.write(data)
+
 
 def fusionAiSettingsGet():
     with open('fusionAiSettings.txt', 'r') as file:
         data = file.read()
         params = json.loads(data)
         return params
+
 
 @bot.command(name='zodiac')
 async def zodiac(ctx):
@@ -129,6 +111,7 @@ async def zodiac(ctx):
     zodiac_sign = view.zodiac_sign
     text = await horoscope.get_horoscope(zodiac_sign)
     await ctx.reply(horoscope.parse(text))
+
 
 @bot.command(name='pic')
 async def convertTextToImage(ctx, *, message: str):
@@ -177,15 +160,31 @@ async def convertTextToImage(ctx, *, message: str):
         picture = discord.File(f)
         await ctx.reply(file=picture)
 
+
 @bot.command(name='tr')
 async def yandex_translate(ctx, *, message: str):
     response, lang = await YandexTranslate.translate(message)
     await ctx.reply(f'*Автоопределение языка: {lang}* \n{response}')
 
+
+@bot.command(name="wiki")
+async def wiki(ctx, *, message: str):
+    print(f"поиск по тайтлу {message}")
+    wikipedia.set_lang("ru")
+    try:
+        result = wikipedia.summary(message, sentences=10)
+        print(f"result: {result}")
+        await ctx.reply(result)
+    except Exception as e:
+        print(e)
+        await ctx.reply(e)
+
+
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.errors.CheckFailure):
         await ctx.send('Недостаточно прав')
+
 
 @bot.event
 async def on_error(event, *args):
@@ -194,6 +193,7 @@ async def on_error(event, *args):
             f.write(f'Unhandled message: {args[0]}\n')
         else:
             raise
+
 
 @bot.event
 async def on_voice_state_update(member, before, after):
@@ -211,6 +211,7 @@ async def on_voice_state_update(member, before, after):
     if before.channel.category == vc_maker.category and before.channel != vc_maker and len(before.channel.members) == 0:
         await before.channel.delete()
 
+
 async def voice_channel_create(channel, ch_name, member):
     new_channel = await channel.guild.create_voice_channel(name=ch_name,
                                                            category=channel.category,
@@ -222,5 +223,6 @@ async def voice_channel_create(channel, ch_name, member):
                                       manage_permissions=True,
                                       create_instant_invite=True)
     return new_channel
+
 
 bot.run(TOKEN)
